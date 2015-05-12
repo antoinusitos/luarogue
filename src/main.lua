@@ -11,8 +11,7 @@ function love.load(args)
 	player = thePlayer.new()
 	player.img = love.graphics.newImage("image/kingflanyoda.png")
 	
-	d:placePlayer(player)
-	d:lockDoors()
+	love.generate()
 end
 
 function love.update(dt)
@@ -34,22 +33,25 @@ function love.draw()
 			end
 			love.graphics.rectangle("fill", i*tileSize, j*tileSize, tileSize, tileSize)
 			love.graphics.setColor(0, 0, 0)
-			--love.graphics.print(d:getTile(i,j).group, i*tileSize, j*tileSize)
+			love.graphics.print(d:getTile(i,j).group, i*tileSize, j*tileSize)
 		end
 	end
 	love.graphics.setColor(255, 255, 255)
 	love.graphics.draw(player.img, player.x*tileSize, player.y*tileSize)
 end
 
+function love.generate()
+	d = dungeon.new()
+	d:generate()
+	d:placePlayer(player)
+	d:placeLockedDoors(player)
+end
+
 function love.keypressed(key)
 	if key == "escape" then
 		love.event.push("quit")
 	elseif key == " " then
-		d = dungeon.new()
-		d:generate()
-		d:placePlayer(player)
-		player.keys = 1
-		d:lockDoors()
+		love.generate()
 	elseif key == "r" then
 		print(player.x)
 		print(player.y)

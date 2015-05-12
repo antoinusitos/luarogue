@@ -2,6 +2,8 @@ local dungeon_mt = {}
 local dungeon = {}
 local tile = require("tile")
 local connection = require("connection")
+local room = require("room")
+local door = require("door")
 
 -- CONSTRUCTEUR --
 function dungeon.new(options)
@@ -13,6 +15,8 @@ function dungeon.new(options)
 	self.ysize = options.ysize or 25
 	self.w = self.xsize * 2 +1
 	self.h = self.ysize * 2 +1
+	self.rooms = {}
+	self.exit = -1
 	
 	for i=1, self.w do
 		for j=1, self.h do
@@ -163,6 +167,8 @@ end
 
 -- ajoute une room au jeu --
 function dungeon_mt:placeRoom(x,y,w,h, group)
+	local TheRoom = room.new(x,y,w,h)
+	table.insert(self.rooms, TheRoom)
 	for i=x,x+w do
 		for j=y,y+h do
 			self:setTile(i,j,tile.new(tile.id.room, group))
@@ -189,26 +195,97 @@ function dungeon_mt:makeConnections ()
 		local c1 = v.connects[1]
 		local c2 = v.connects[2]
 		if not c:isConnected(c1, c2) then
-			--self:setTile(v.x, v.y, tile.new(tile.id.floor, 0))
-			self:setTile(v.x, v.y, tile.new(tile.id.candidate, 0))
+			self:setTile(v.x, v.y, tile.new(tile.id.floor, 0))
+			--self:setTile(v.x, v.y, tile.new(tile.id.candidate, 0))
 			c:connect(c1,c2)
+			table.insert(c.doors, v)
+		end
+	end
+	for _,v in ipairs(c.doors) do
+		
+	end
+end
+
+-- recherche des voisins par rapport à une porte --
+function dungeon_mt:makeNeighbors(X, Y, pX, pY)
+	local tableVoisin = {}
+	local n_list = {
+		{x = 1, y = 0},
+		{x = -1, y = 0},
+		{x = 0, y = 1},
+		{x = 0, y = -1}
+	}
+	for _,v in ipairs(n_list) do
+		if v.x + X == pX and v.y + Y == pY then
+		
+		elseif self:getTile(X + v.x, Y + v.y).id == tile.id.floor then
+		if not tableVoisin then
+			print("tableVoisin est nil")
+		end
+			self:append(tableVoisin, self:makeNeighbors(X + v.x, Y + v.y, X, Y))
+			
+		elseif self:getTile(X + v.x, Y + v.y).id == tile.id.room then
+			table.insert(tableVoisin, self:getTile(X + v.x, Y + v.y).group)
+		end
+	end
+	return tableVoisin
+end
+
+-- ajoute le tableau arrayAdd dans le tableau array --
+function dungeon_mt:append(array, arrayAdd)
+	if array == nil then
+		print("array est nil")
+	end
+	if not arrayAdd then
+		print("arrayAdd est nil")
+	end
+	for i=1, #arrayAdd do
+		table.insert(array, arrayAdd[i])
+	end
+end
+
+function dungeon_mt:placeLockedDoors(p)
+	self:getRooms(p)
+	self:chooseExit(p)
+end
+
+-- creer les voisins pour chaque rooms--
+function dungeon_mt:getRooms(p)
+	for i=1, #self.rooms do
+		-- le haut de la salle --
+		for haut=self.rooms[i].x, self.rooms[i].x + self.rooms[i].w do
+			if self:getTile(haut,self.rooms[i].y-1).id == tile.id.floor then
+				self:append(self.rooms[i].neighbors, self:makeNeighbors(haut, self.rooms[i].y-1, haut, self.rooms[i].y))
+			end
+		end
+		-- la droite de la salle --
+		for droit=self.rooms[i].y, self.rooms[i].y + self.rooms[i].h do
+			if self:getTile(self.rooms[i].x + self.rooms[i].w + 1 ,droit).id == tile.id.floor then
+				self:append(self.rooms[i].neighbors, self:makeNeighbors(self.rooms[i].x + self.rooms[i].w + 1,droit, self.rooms[i].x, droit))
+			end
+		end
+		-- le bas de la salle --
+		for bas=self.rooms[i].x, self.rooms[i].x + self.rooms[i].w do
+			if self:getTile(bas,self.rooms[i].y + self.rooms[i].h +1).id == tile.id.floor then
+				self:append(self.rooms[i].neighbors, self:makeNeighbors(bas, self.rooms[i].y + self.rooms[i].h +1, bas, self.rooms[i].y))
+			end
+		end
+		-- la gauche de la salle --
+		for gauche=self.rooms[i].y, self.rooms[i].y + self.rooms[i].h do
+			if self:getTile(self.rooms[i].x - 1 , gauche).id == tile.id.floor then
+				self:append(self.rooms[i].neighbors, self:makeNeighbors(self.rooms[i].x - 1, gauche, self.rooms[i].x, gauche))
+			end
 		end
 	end
 end
 
--- verouille une porte dans le niveau --
-function dungeon_mt:lockDoors()
-	local doors = {}
-	for i=1,self.xsize do
-		for j=1,self.ysize do
-			if d:getTile(i,j).id==tile.id.candidate then
-				table.insert(doors, d:getTile(i,j))
-			end
+function dungeon_mt:chooseExit(p)
+	for i=1, #self.rooms do
+		if #self.rooms[i].neighbors == 1 and self:getTile(self.rooms[i].x, self.rooms[i].y).group ~= self:getTile(p.x, p.y).group then
+			self.exit = self:getTile(self.rooms[i].x, self.rooms[i].y).group
+			print("exit:",self.exit)
+			return
 		end
-	end
-	doors = shuffle(doors)
-	for _,v in ipairs(doors) do
-		v.id = tile.id.lock
 	end
 end
 
@@ -236,7 +313,6 @@ function dungeon_mt:removeDead(x,y)
 			end
 			return true
 		end
-		
 	end
 end
 

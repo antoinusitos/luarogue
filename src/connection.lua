@@ -5,6 +5,7 @@ function connection.new()
 	self = setmetatable({}, {__index = connection_mt})
 	
 	self.data = {}
+	self.doors = {}
 	
 	return self
 end

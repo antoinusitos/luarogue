@@ -9,6 +9,7 @@ function connection.new()
 	return self
 end
 
+--verifie que 2 endroits ne soit pas relie
 function connection_mt:isConnected(a,b)
 	if self.data[a] then
 		for i,v in pairs(self.data[a]) do
@@ -19,6 +20,7 @@ function connection_mt:isConnected(a,b)
 	end
 end
 
+-- connecte 2 endroits ensemble --
 function connection_mt:connect(a,b)
 	if not self.data[a] then
 		self.data[a] = {}

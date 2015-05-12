@@ -5,7 +5,8 @@ tile.id = {
 	wall = 1,
 	floor = 0,
 	room = 2,
-	candidate = 3
+	candidate = 3,
+	lock = 4
 }
 
 function tile.new( id, group )

@@ -3,6 +3,7 @@ local dungeon = {}
 local tile = require("tile")
 local connection = require("connection")
 
+-- CONSTRUCTEUR --
 function dungeon.new(options)
 	options = options or {}
 	local self = setmetatable({}, {__index=dungeon_mt})
@@ -22,6 +23,20 @@ function dungeon.new(options)
 	return self
 end
 
+-- place le joueur dans une piece --
+function dungeon_mt:placePlayer(p)
+	for i=1,self.xsize do
+		for j=1,self.ysize do
+			if d:getTile(i,j).id==tile.id.room then
+				p.x = i
+				p.y = j
+				return
+			end
+		end
+	end
+end
+
+-- genere les salles, place les chemins, raccorde les salles, supprime les cul-de-sac --
 function dungeon_mt:generate()
 	self:placeRooms(100)
 	local group = -1
@@ -43,6 +58,7 @@ function dungeon_mt:generate()
 	end
 end
 
+-- trouve les endroits ou poser des portes et renvoi un tableau des cases possibles et de leur coordonnees --
 function dungeon_mt:findCandidates()
 	local candidates = {}
 	
@@ -77,6 +93,7 @@ function dungeon_mt:findCandidates()
 	
 end
 
+-- melange le tableau --
 local shuffle = function(array)
 	local s_array = {}
 	while #array>0 do
@@ -87,6 +104,7 @@ local shuffle = function(array)
 	return s_array
 end
 
+-- place le chemin de façon aleatoire --
 function dungeon_mt:maze(x,y, group)
 	if self:getTile(x,y).id ~= tile.id.wall then
 		return
@@ -113,6 +131,7 @@ function dungeon_mt:maze(x,y, group)
 	end
 end
 
+-- tente de placer des rooms dans le jeu --
 function dungeon_mt:placeRooms(max_failed)
 	local failed = 0
 	local group = 1
@@ -142,6 +161,7 @@ function dungeon_mt:placeRooms(max_failed)
 	end
 end
 
+-- ajoute une room au jeu --
 function dungeon_mt:placeRoom(x,y,w,h, group)
 	for i=x,x+w do
 		for j=y,y+h do
@@ -149,7 +169,8 @@ function dungeon_mt:placeRoom(x,y,w,h, group)
 		end
 	end
 end
-
+ 
+-- verifie qu'un objet est contenu dans un tableau --
 local contains = function(array, content)
 	for i,v in ipairs(array) do
 		if v==content then
@@ -158,6 +179,8 @@ local contains = function(array, content)
 	end
 end
 
+--cree des connections entre pieces et entre chemin et piece
+-- recupere les cases possibles pour une porte, melange le tableau, place du sol si c'est possible --
 function dungeon_mt:makeConnections ()
 	local cands = self:findCandidates()
 	local c = connection.new()
@@ -166,12 +189,30 @@ function dungeon_mt:makeConnections ()
 		local c1 = v.connects[1]
 		local c2 = v.connects[2]
 		if not c:isConnected(c1, c2) then
-			self:setTile(v.x, v.y, tile.new(tile.id.floor, 0))
+			--self:setTile(v.x, v.y, tile.new(tile.id.floor, 0))
+			self:setTile(v.x, v.y, tile.new(tile.id.candidate, 0))
 			c:connect(c1,c2)
 		end
 	end
 end
 
+-- verouille une porte dans le niveau --
+function dungeon_mt:lockDoors()
+	local doors = {}
+	for i=1,self.xsize do
+		for j=1,self.ysize do
+			if d:getTile(i,j).id==tile.id.candidate then
+				table.insert(doors, d:getTile(i,j))
+			end
+		end
+	end
+	doors = shuffle(doors)
+	for _,v in ipairs(doors) do
+		v.id = tile.id.lock
+	end
+end
+
+-- supprime les bouts de chemin isoles --
 function dungeon_mt:removeDead(x,y)
 	if self:getTile(x,y).id == tile.id.floor then
 		local n_list = {
@@ -199,12 +240,14 @@ function dungeon_mt:removeDead(x,y)
 	end
 end
 
+-- place une tile dans le jeu -- 
 function dungeon_mt:setTile(x, y, tile)
 	x = ((x-1)%self.w)+1
 	y = ((y-1)%self.h)+1
 	self.data[ (x-1) + (y-1) * self.w + 1  ] = tile
 end
 
+-- recupere une tile avec ses coordonnees--
 function dungeon_mt:getTile(x, y)
 	x = ((x-1)%self.w)+1
 	y = ((y-1)%self.h)+1

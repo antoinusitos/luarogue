@@ -12,7 +12,7 @@ function love.load(args)
 	player.img = love.graphics.newImage("image/kingflanyoda.png")
 	
 	d:placePlayer(player)
-	d:lockDoors()
+	--d:lockDoors()
 end
 
 function love.update(dt)

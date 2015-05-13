@@ -7,8 +7,10 @@
 + De
 + Choses
 
+```C
 	void UnBloc(deCode){
 		qui.nefaitrien();
 	}
+```
 
 C'est *super* sympa!

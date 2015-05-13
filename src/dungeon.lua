@@ -220,7 +220,7 @@ function dungeon_mt:makeNeighbors(X, Y, pX, pY)
 		
 		elseif self:getTile(X + v.x, Y + v.y).id == tile.id.floor then
 		if not tableVoisin then
-			print("tableVoisin est nil")
+
 		end
 			self:append(tableVoisin, self:makeNeighbors(X + v.x, Y + v.y, X, Y))
 			
@@ -233,12 +233,6 @@ end
 
 -- ajoute le tableau arrayAdd dans le tableau array --
 function dungeon_mt:append(array, arrayAdd)
-	if array == nil then
-		print("array est nil")
-	end
-	if not arrayAdd then
-		print("arrayAdd est nil")
-	end
 	for i=1, #arrayAdd do
 		table.insert(array, arrayAdd[i])
 	end
@@ -283,7 +277,7 @@ function dungeon_mt:chooseExit(p)
 	for i=1, #self.rooms do
 		if #self.rooms[i].neighbors == 1 and self:getTile(self.rooms[i].x, self.rooms[i].y).group ~= self:getTile(p.x, p.y).group then
 			self.exit = self:getTile(self.rooms[i].x, self.rooms[i].y).group
-			print("exit:",self.exit)
+			--print("exit:",self.exit)
 			return
 		end
 	end

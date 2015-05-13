@@ -13,6 +13,8 @@ function dungeon.new(options)
 	self.ysize = options.ysize or 25
 	self.w = self.xsize * 2 +1
 	self.h = self.ysize * 2 +1
+	self.roomList = {}
+	self.secretRooms = {}
 	
 	for i=1, self.w do
 		for j=1, self.h do
@@ -38,7 +40,9 @@ end
 
 -- genere les salles, place les chemins, raccorde les salles, supprime les cul-de-sac --
 function dungeon_mt:generate()
-	self:placeRooms(100)
+	self:placeRooms(25)
+	-- les salles sont placées
+	
 	local group = -1
 	for i=1,self.xsize do
 		for j=1,self.ysize do
@@ -46,7 +50,9 @@ function dungeon_mt:generate()
 			group = group -1
 		end
 	end
+	-- les morceaux de labyrinthe sont générés
 	self:makeConnections()
+	-- les connections sont makées
 	local removed = true
 	while removed do
 		removed = false
@@ -56,6 +62,8 @@ function dungeon_mt:generate()
 			end
 		end
 	end
+	-- c'est tout propre !
+	self:hideRoom()
 end
 
 -- trouve les endroits ou poser des portes et renvoi un tableau des cases possibles et de leur coordonnees --
@@ -145,6 +153,7 @@ function dungeon_mt:placeRooms(max_failed)
 			for j=y*2,y*2+h*2 do
 				if self:getTile(i,j).id ~= tile.id.wall then
 					nope = true
+					
 					break
 				end
 			end
@@ -163,6 +172,12 @@ end
 
 -- ajoute une room au jeu --
 function dungeon_mt:placeRoom(x,y,w,h, group)
+	table.insert(self.roomList,{
+		X=x,
+		Y=y,
+		width = w,
+		height = h
+	})
 	for i=x,x+w do
 		for j=y,y+h do
 			self:setTile(i,j,tile.new(tile.id.room, group))
@@ -189,8 +204,8 @@ function dungeon_mt:makeConnections ()
 		local c1 = v.connects[1]
 		local c2 = v.connects[2]
 		if not c:isConnected(c1, c2) then
-			--self:setTile(v.x, v.y, tile.new(tile.id.floor, 0))
 			self:setTile(v.x, v.y, tile.new(tile.id.candidate, 0))
+			--self:setTile(v.x, v.y, tile.new(tile.id.candidate, 0))
 			c:connect(c1,c2)
 		end
 	end
@@ -252,6 +267,46 @@ function dungeon_mt:getTile(x, y)
 	x = ((x-1)%self.w)+1
 	y = ((y-1)%self.h)+1
 	return self.data[ (x-1) + (y-1) * self.w + 1  ] or tile.new(tile.id.wall, -1)
+end
+
+-- (je) flante les rooms qui sont toutes seules --
+function dungeon_mt:hideRoom()
+	
+	local n_list = {
+		{x = 1, y = 0},
+		{x = -1, y = 0},
+		{x = 0, y = 1},
+		{x = 0, y = -1}
+	}
+	print(table.getn(self.roomList))
+	for _,k in ipairs(self.roomList) do
+		local x = k.X
+		local y = k.Y
+		local w = k.width
+		local h = k.height
+		local nbConnection = 0
+		local nbCandidate = 0
+		for i=x, x+w do
+			for j=y, y+h do
+				if self:getTile(i,j).id == tile.id.room then
+					for _,v in ipairs(n_list) do
+						if self:getTile(i+v.x,j+v.y).id == tile.id.candidate and
+						self:getTile(i+v.x*2,j+v.y*2).id == tile.id.room then
+							nbConnection = nbConnection + 1
+						end
+						if self:getTile(i+v.x,j+v.y).id == tile.id.candidate then
+							nbCandidate = nbCandidate +1
+						end
+					end
+					
+				end
+			end
+		end
+		if nbConnection == 1 and nbCandidate == 1 then
+			print(x.." et "..y)
+			table.insert(self.secretRooms,k)
+		end
+	end
 end
 
 return dungeon

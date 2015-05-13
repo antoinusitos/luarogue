@@ -12,7 +12,7 @@ function love.load(args)
 	player.img = love.graphics.newImage("image/kingflanyoda.png")
 	
 	d:placePlayer(player)
-	d:lockDoors()
+	--d:lockDoors()
 end
 
 function love.update(dt)
@@ -49,7 +49,7 @@ function love.keypressed(key)
 		d:generate()
 		d:placePlayer(player)
 		player.keys = 1
-		d:lockDoors()
+		--d:lockDoors()
 	elseif key == "r" then
 		print(player.x)
 		print(player.y)

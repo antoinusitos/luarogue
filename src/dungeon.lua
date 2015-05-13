@@ -198,8 +198,8 @@ function dungeon_mt:makeConnections ()
 		local c1 = v.connects[1]
 		local c2 = v.connects[2]
 		if not c:isConnected(c1, c2) then
-			--self:setTile(v.x, v.y, tile.new(tile.id.floor, 0))
-			self:setTile(v.x, v.y, tile.new(tile.id.candidate, 0))
+			self:setTile(v.x, v.y, tile.new(tile.id.floor, 0))
+			--self:setTile(v.x, v.y, tile.new(tile.id.candidate, 0))
 			c:connect(c1,c2)
 		end
 	end

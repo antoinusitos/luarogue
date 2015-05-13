@@ -3,7 +3,7 @@ function love.load(args)
 	dungeon = require("dungeon")
 	tile = require("tile")
 	thePlayer = require("player")
-	tileSize = 20
+	tileSize = 10
 	d = dungeon.new()
 	
 	d:generate()

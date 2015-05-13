@@ -23,17 +23,28 @@ function dungeon.new(options)
 	return self
 end
 
--- place le joueur dans une piece --
-function dungeon_mt:placePlayer(p)
-	for i=1,self.xsize do
-		for j=1,self.ysize do
-			if d:getTile(i,j).id==tile.id.room then
-				p.x = i
-				p.y = j
-				return
-			end
+-- Applique une fonction "cb" à un ensemble de cases en rectangle
+function dungeon_mt:mapRect(cb, x, y, w, h)
+	local x = x or 1
+	local y = y or 1
+	local w = w or self.xsize-(x-1)
+	local h = h or self.ysize-(y-1)
+	for i=x,x+w do
+		for j=y,y+h do
+			cb(self:getTile(i,j),i,j)
 		end
 	end
+end
+
+-- place le joueur dans une piece --
+function dungeon_mt:placePlayer(p)
+	self:mapRect(function(t,i,j)
+		if t.id==tile.id.room then
+			p.x = i
+			p.y = j
+			return
+		end
+	end)
 end
 
 -- genere les salles, place les chemins, raccorde les salles, supprime les cul-de-sac --
@@ -52,7 +63,7 @@ function dungeon_mt:generate()
 		removed = false
 		for i=2, self.w-1 do
 			for j=2, self.h-1 do
-				removed = removed or d:removeDead(i,j)
+				removed = removed or self:removeDead(i,j)
 			end
 		end
 	end
@@ -163,11 +174,9 @@ end
 
 -- ajoute une room au jeu --
 function dungeon_mt:placeRoom(x,y,w,h, group)
-	for i=x,x+w do
-		for j=y,y+h do
+	self:mapRect(function(t,i,j)
 			self:setTile(i,j,tile.new(tile.id.room, group))
-		end
-	end
+	end,x,y,w,h)
 end
  
 -- verifie qu'un objet est contenu dans un tableau --
@@ -201,8 +210,8 @@ function dungeon_mt:lockDoors()
 	local doors = {}
 	for i=1,self.xsize do
 		for j=1,self.ysize do
-			if d:getTile(i,j).id==tile.id.candidate then
-				table.insert(doors, d:getTile(i,j))
+			if self:getTile(i,j).id==tile.id.candidate then
+				table.insert(doors, self:getTile(i,j))
 			end
 		end
 	end

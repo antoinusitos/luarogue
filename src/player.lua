@@ -6,7 +6,7 @@ function player.new()
 	
 	self.x = 10
 	self.y = 10
-	self.name = "antoine"
+	self.name = "pd"
 	self.speed = 10
 	
 	self.keys = 1

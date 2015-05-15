@@ -2,11 +2,12 @@ local tile_mt = {}
 local tile = {}
 
 tile.id = {
-	wall = 1,
 	floor = 0,
+	wall = 1,
 	room = 2,
 	candidate = 3,
-	lock = 4
+	lock = 4,
+	hidden = 5
 }
 
 function tile.new( id, group )

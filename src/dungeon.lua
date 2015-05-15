@@ -21,8 +21,8 @@ function dungeon.new(options)
 	local self = setmetatable({}, {__index=dungeon_mt})
 	
 	self.data = {}
-	self.xsize = options.xsize or 10
-	self.ysize = options.ysize or 10
+	self.xsize = options.xsize or 16
+	self.ysize = options.ysize or 16
 	self.w = self.xsize * 2 +1
 	self.h = self.ysize * 2 +1
 	self.rooms = {}
@@ -31,6 +31,7 @@ function dungeon.new(options)
 	self.groups = {A={}, B={}, C={}, D={}}
 	self.playerRoom = 1
 	self.keys = {{x = 0, y = 0, picked = false, group = "A"}, {x = 0, y = 0, picked = false, group = "B"},{x = 0, y = 0, picked = false, group = "C"}}
+	self.lastTile = {x = 0, y = 0}
 	
 	for i=1, self.w do
 		for j=1, self.h do
@@ -56,10 +57,12 @@ end
 
 -- place les clés dans les salles du groupe correspondant --
 function dungeon_mt:placeKeys(G, R, W)
-
+	W.picked = false
+	G.picked = false
+	R.picked = false
 	local rand = math.random() * #self.groups.A + 1
 	rand = math.floor(rand)
-	print(rand)
+	--print(rand)
 	local x = self.groups.A[rand].dimensions.x + math.floor(math.random() * self.groups.A[rand].dimensions.w)
 	local y = self.groups.A[rand].dimensions.y + math.floor(math.random() * self.groups.A[rand].dimensions.h)
 	W.x = x
@@ -68,7 +71,7 @@ function dungeon_mt:placeKeys(G, R, W)
 
 	rand = math.random() * #self.groups.B + 1
 	rand = math.floor(rand)
-	print(rand)
+	--print(rand)
 	x = self.groups.B[rand].dimensions.x + math.floor(math.random() * self.groups.B[rand].dimensions.w)
 	y = self.groups.B[rand].dimensions.y + math.floor(math.random() * self.groups.B[rand].dimensions.h)
 	R.x = x
@@ -77,7 +80,7 @@ function dungeon_mt:placeKeys(G, R, W)
 
 	rand = math.random() * #self.groups.C + 1
 	rand = math.floor(rand)
-	print(rand)
+	--print(rand)
 	x = self.groups.C[rand].dimensions.x + math.floor(math.random() * self.groups.C[rand].dimensions.w)
 	y = self.groups.C[rand].dimensions.y + math.floor(math.random() * self.groups.C[rand].dimensions.h)
 	G.x = x
@@ -137,11 +140,17 @@ end
 -- parcours en profondeur entre la porte et le joueur --
 function dungeon_mt:findThePath(theLastRoom, theRoom, theVisitedRoom)
 	if theRoom.group == theLastRoom.group then
-
+		--print("==")
+		--print(theRoom.group)
+		--print(theLastRoom.group)
 		return
 	elseif self:contains(theVisitedRoom, theRoom) then
+		--print("contains")
+		--print(theRoom.group)
+		--useful.printPretty(theVisitedRoom)
 		return
 	elseif self:contains(self.groups.A, theRoom) then
+		--print("insert")
 		table.insert(theVisitedRoom, theRoom)
 
 		for i= 1, #theRoom.neighbors do
@@ -149,10 +158,13 @@ function dungeon_mt:findThePath(theLastRoom, theRoom, theVisitedRoom)
 				local door = theLastRoom.doors[self:findNeighborByRoom(theLastRoom, theRoom).index]
 				if self:getTile(door.x, door.y).id ~= tile.id.lock then
 					self:setTile(door.x, door.y, tile.new(tile.id.lock, (self.TotalDoor+1 - self.doorsToPlace)*1000))
-					print((self.TotalDoor+1 - self.doorsToPlace)*1000)
+					self.lastTile.x = door.x
+					self.lastTile.y = door.y
+					--print((self.TotalDoor+1 - self.doorsToPlace)*1000)
 					
 				end
 			end
+			--print("find")
 			self:findThePath(theLastRoom, self:getRoomByGroup(theRoom.neighbors[i].group), theVisitedRoom)
 		end
 	end
@@ -195,28 +207,54 @@ function dungeon_mt:getIndexByGroup(theGroup)
 	end
 end
 
+-- recupere toutes les portes --
+function dungeon_mt:getDoors()
+	local nombre = 0
+	for i = 1, #self.rooms do
+		nombre = nombre + #self.rooms[i].doors
+	end
+	return nombre
+end
+
 -- place une porte dans le niveau --
 function dungeon_mt:placeDoor()
 	local visitedRoom = {}
-	while(#visitedRoom < self.doorsToPlace + 2) do
+	if self:getDoors() < self.doorsToPlace + 2 and #self.rooms <= self.doorsToPlace then
+		self:generate()
+	else
 		local random = math.random(1, #self.rooms)
-		while not self:contains(self.groups.A, self:getRoomByGroup(random)) do
+		while not self:contains(self.groups.A, self.rooms[random]) or ( self.rooms[random].group <= 1 and #self.groups.A > 1 )  do
+			--print(random)
+			--print("group random", self.rooms[random].group )
+			--print("length", #self.groups.A )
+
+			--print("n b salles:",#self.rooms)
+			--print("doors to place:",self.doorsToPlace)
 			random = math.random(1, #self.rooms)
 		end
-		local lastRoom = self.groups.A[self:getIndexByGroup(random)]
+		
+		--print("ok")
+
+		local lastRoom = self.groups.A[self:getIndexByGroup(self.rooms[random].group)]
 		local room = self:getRoomByGroup(self.playerRoom)
 		self:findThePath(lastRoom, room, visitedRoom)
+
+		if #visitedRoom >= self.doorsToPlace  then
+
+			self:invertMoveRooms(visitedRoom)
+			self.doorsToPlace = self.doorsToPlace - 1
+		else
+			--print("relance:", #visitedRoom)
+			self:setTile(self.lastTile.x, self.lastTile.y, tile.new(tile.id.floor, 0))
+		end
 	end
-	self:invertMoveRooms(visitedRoom)
-	self.doorsToPlace = self.doorsToPlace - 1
-	--self:printRoomsGroup(self.groups.A)
 end
 
 -- recherches les voisins d'une salle --
 function dungeon_mt:searchNeighbors(theRoom, indexRoom)
 	local neighbors = {}
 	for i=1, #theRoom.doors do
-		self:append(neighbors, self:makeNeighbors(theRoom.doors[i].x, theRoom.doors[i].y, theRoom.doors[i].x, theRoom.doors[i].y, theRoom.doors[i], indexRoom))
+		self:append(neighbors, self:makeNeighbors(theRoom.doors[i].x, theRoom.doors[i].y, theRoom.doors[i].x, theRoom.doors[i].y, theRoom.doors[i], indexRoom, theRoom))
 	end
 	return neighbors
 end
@@ -226,7 +264,7 @@ function dungeon_mt:getRoom(group)
 end
 
 -- recherche des voisins par rapport à une porte --
-function dungeon_mt:makeNeighbors(X, Y, pX, pY, theDoor, theID, longueur)
+function dungeon_mt:makeNeighbors(X, Y, pX, pY, theDoor, theID, theRoom, longueur)
 	local longueur = longueur or 1
 	local tableVoisin = {}
 	local n_list = {
@@ -241,9 +279,9 @@ function dungeon_mt:makeNeighbors(X, Y, pX, pY, theDoor, theID, longueur)
 		elseif self:getTile(X + v.x, Y + v.y).id == tile.id.floor then
 			if tableVoisin then
 				longueur = longueur + 1
-				self:append(tableVoisin, self:makeNeighbors(X + v.x, Y + v.y, X, Y, theDoor, theID, longueur))
+				self:append(tableVoisin, self:makeNeighbors(X + v.x, Y + v.y, X, Y, theDoor, theID, theRoom, longueur))
 			end
-		elseif self:getTile(X + v.x, Y + v.y).id == tile.id.room and self:getTile(X + v.x, Y + v.y).group ~= theID then
+		elseif self:getTile(X + v.x, Y + v.y).id == tile.id.room and self:getTile(X + v.x, Y + v.y).group ~= theID and theRoom.group ~= self:getTile(X + v.x, Y + v.y).group then
 			table.insert(tableVoisin, {group = self:getTile(X + v.x, Y + v.y).group, index = theDoor.index, length = longueur})
 		end
 	end
@@ -296,9 +334,19 @@ function dungeon_mt:placePlayer(p)
 	p.y = room.dimensions.y
 end
 
+-- repasse toutes les tiles au sol --
+function dungeon_mt:clean()
+	for i=1,self.xsize do
+		for j=1,self.ysize do
+			self:setTile(i, j, tile.new(tile.id.wall, 0))
+		end
+	end
+end
+
 -- genere les salles, place les chemins, raccorde les salles, supprime les cul-de-sac --
 function dungeon_mt:generate()
-	self:placeRooms(10)
+	self:clean()
+	self:placeRooms(10000)
 	local group = -1
 	for i=1,self.xsize do
 		for j=1,self.ysize do
@@ -330,6 +378,15 @@ function dungeon_mt:generate()
 	while self.doorsToPlace > 0 do
 		self:placeDoor()
 	end
+
+	self:PlaceExit()
+
+end
+
+function dungeon_mt:PlaceExit()
+	local random = math.random(1, #self.groups.D)
+	local room = self.groups.D[random]
+	self:setTile(room.dimensions.x + math.floor(room.dimensions.w / 2) , room.dimensions.y + math.floor(room.dimensions.h / 2) , tile.new(tile.id.exit, 500))
 end
 
 -- trouve les endroits ou poser des portes et renvoi un tableau des cases possibles et de leur coordonnees --

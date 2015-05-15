@@ -25,6 +25,7 @@ function love.update(dt)
 end
 
 function love.generate()
+	d = dungeon.new()
 	d:generate()
 	d:placePlayer(player)
 	d:placeKeys(key_Green, key_Red, key_White)
@@ -35,9 +36,9 @@ function love.draw()
 	for i=1,d.w do
 		for j=1,d.h do
 			if d:getTile(i,j).id==tile.id.floor then
-				love.graphics.setColor(64, 50, 255)
+				love.graphics.setColor(128, 172, 208)
 			elseif d:getTile(i,j).id==tile.id.wall then
-				love.graphics.setColor(160, 160, 54)
+				love.graphics.setColor(0, 0, 0)
 			elseif d:getTile(i,j).id==tile.id.candidate then
 				love.graphics.setColor(255, 255,255)
 			elseif d:getTile(i,j).id==tile.id.lock then
@@ -48,12 +49,14 @@ function love.draw()
 				elseif d:getTile(i,j).group == 3000 then
 					love.graphics.setColor(255, 255, 255)
 				end
+			elseif d:getTile(i,j).id==tile.id.exit then
+				love.graphics.setColor(150, 0, 255)
 			else
-				love.graphics.setColor(255, 160, 154)
+				love.graphics.setColor(129, 207, 138)
 			end
 			love.graphics.rectangle("fill", i*tileSize, j*tileSize, tileSize, tileSize)
 			love.graphics.setColor(0, 0, 0)
-			love.graphics.print(d:getTile(i,j).group, i*tileSize, j*tileSize)
+			--love.graphics.print(d:getTile(i,j).group, i*tileSize, j*tileSize)
 		end
 	end
 	--]]
@@ -86,9 +89,7 @@ function love.draw()
 end
 
 function haveTheKey(theDoor)
-	print("have the key :", theDoor.group)
 	if theDoor.group == 3000 then
-		print("have the key white")
 		return key_White.picked
 	elseif theDoor.group == 2000 then
 		return key_Red.picked
@@ -100,11 +101,12 @@ end
 function isOnKey()
 	if player.x == key_White.x and player.y == key_White.y then
 		key_White.picked = true
-		print("key white picked up")
 	elseif player.x == key_Green.x and player.y == key_Green.y then
 		key_Green.picked = true
 	elseif player.x == key_Red.x and player.y == key_Red.y then
 		key_Red.picked = true
+	elseif d:getTile(player.x, player.y).id == tile.id.exit then
+		love.generate()
 	end
 
 end

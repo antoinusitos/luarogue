@@ -9,8 +9,6 @@ function player.new()
 	self.name = "antoine"
 	self.speed = 10
 	
-	self.keys = 1
-	
 	return self
 end
 
